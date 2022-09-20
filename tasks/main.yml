@@ -5,7 +5,7 @@
       apiVersion: v1
       kind: Namespace
       metadata:
-        name: "{{ nginx_namespace | default('nginx-ingress') }}"
+        name: "{{ haproxy_namespace | default('haproxy-ingress') }}"
 
 - name: Create HAproxy ServiceAccount
   kubernetes.core.k8s:
@@ -15,7 +15,7 @@
     kind: ServiceAccount
     metadata:
       name: haproxy-kubernetes-ingress
-      namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
+      namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
 
 - name: Create HAproxy ClusterRole
   kubernetes.core.k8s:
@@ -96,7 +96,7 @@
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
         name: haproxy-kubernetes-ingress
-        namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
+        namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
       roleRef:
         apiGroup: rbac.authorization.k8s.io
         kind: ClusterRole
@@ -104,7 +104,7 @@
       subjects:
       - kind: ServiceAccount
         name: haproxy-kubernetes-ingress
-        namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
+        namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
 
 - name: Create HAproxy ConfigMap for IngressClass
   kubernetes.core.k8s:
@@ -114,7 +114,7 @@
       kind: ConfigMap
       metadata:
         name: haproxy-kubernetes-ingress
-        namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
+        namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
       data:
         dynamic-scaling: "true"
 
@@ -126,8 +126,8 @@
       apiVersion: networking.k8s.io/v1
       kind: IngressClass
       metadata:
-        namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
-        name: "{{ ingress_class | default('nginx') }}"
+        namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
+        name: "{{ ingress_class | default('haproxy') }}"
       spec:
         controller: haproxy-ingress.github.io/controller
         parameters:
@@ -147,7 +147,7 @@
       kind: ConfigMap
       metadata:
         name: haproxy-ingress-class-options
-        namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
+        namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
 
 - name: Create HAproxy DaemonSet
   kubernetes.core.k8s:
@@ -159,7 +159,7 @@
         labels:
           run: haproxy-ingress
         name: haproxy-kubernetes-ingress
-        namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
+        namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
       spec:
         selector:
           matchLabels:
@@ -174,8 +174,8 @@
             - name: haproxy-ingress
               image: haproxytech/kubernetes-ingress
               args:
-                - "--configmap={{ nginx_namespace | default('nginx-ingress') }}/haproxy-kubernetes-ingress"
-                - "--ingress.class={{ ingress_class | default('nginx') }}"
+                - "--configmap={{ haproxy_namespace | default('haproxy-ingress') }}/haproxy-kubernetes-ingress"
+                - "--ingress.class={{ ingress_class | default('haproxy') }}"
                 - --log=info
               securityContext:
                 runAsUser:  1000
@@ -196,10 +196,10 @@
               ports:
               - name: http
                 containerPort: 80
-                hostPort: 81
+                hostPort: "{{haproxy_host_http_port}}"
               - name: https
                 containerPort: 443
-                hostPort: 1443
+                hostPort: "{{haproxy_host_https_port}}"
               - name: stat
                 containerPort: 1024
               env:
@@ -224,18 +224,18 @@
         labels:
           run: haproxy-ingress
         name: haproxy-kubernetes-ingress
-        namespace: "{{ nginx_namespace | default('nginx-ingress') }}"
+        namespace: "{{ haproxy_namespace | default('haproxy-ingress') }}"
       spec:
         selector:
           run: haproxy-ingress
         type: NodePort
         ports:
         - name: http
-          port: 30099
+          port: "{{nodeHttpPort}}"
           protocol: TCP
           targetPort: 80
         - name: https
-          port: 30943
+          port: "{{nodeHttpsPort}}"
           protocol: TCP
           targetPort: 443
         - name: stat
