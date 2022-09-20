@@ -144,6 +144,7 @@
         balance-algorithm: roundrobin
         maxconn-server: "500"
         ssl-redirect: "false"
+        proxy-protocol: "{{ proxy_protocol if proxy_protocol is defined else 'false' }}"
       kind: ConfigMap
       metadata:
         name: haproxy-ingress-class-options
